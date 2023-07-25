@@ -12,6 +12,7 @@ class VideoPlayerApp:
 
         self.video_path = ""
         self.output_folder = ""
+        self.human_video_path = ""  # 追加：カメラで撮影した動画の保存パス
 
         # ウィジェットの作成
         self.video_label = tk.Label(root, text="Select a video to play (mp4 only):")
@@ -63,16 +64,13 @@ class VideoPlayerApp:
         directory, filename = os.path.split(self.video_path)
 
         # 新しいフォルダ名を追加して新しいパスを作成
-        new_directory = os.path.join(directory, name)
+        new_directory = os.path.join(directory, name).replace("\\", "/")
 
         # フォルダが存在しない場合は作成
         if not os.path.exists(new_directory):
             os.makedirs(new_directory)
-
-        # カメラで撮影した動画を保存するパス名
-        human_video_path = os.path.join(new_directory, filename)
-        print("カメラ映像のpath：", human_video_path)
-        return human_video_path
+        print("カメラ映像のpath：", new_directory)
+        return new_directory
 
     def play_and_capture(self):
         # 動画再生とカメラ撮影を行うためのメソッド
@@ -115,7 +113,6 @@ class VideoPlayerApp:
         # ビデオファイルと同じ場所にテキストファイルを保存
         video_folder = os.path.dirname(self.video_path)
         output_filename = os.path.join(video_folder, f"{name}_video_times.txt")
-        self.human_video_path = self.modify_video_path(name)
 
         with open(output_filename, "w") as file:
             file.write(f"Video Start Time: {start_time}\n")
@@ -160,8 +157,9 @@ class VideoPlayerApp:
 
         # 動画ファイルの保存準備
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        print("動画保存path:", self.human_video_path)
-        output_filename = os.path.join(os.path.dirname(self.human_video_path), f"{name}_{self.video_name}.avi")
+        self.human_video_path = self.modify_video_path(name)
+        output_filename = os.path.join(self.human_video_path, f"{name}_{self.video_name}.avi").replace("\\", "/")
+
         out = cv2.VideoWriter(output_filename, fourcc, camera_fps, (camera_w, camera_h))
 
         while self.is_capturing:
