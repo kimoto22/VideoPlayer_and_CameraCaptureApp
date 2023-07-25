@@ -158,8 +158,9 @@ class VideoPlayerApp:
         # 動画ファイルの保存準備
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.human_video_path = self.modify_video_path(name)
+        print("動画保存path:", self.human_video_path)
         output_filename = os.path.join(self.human_video_path, f"{name}_{self.video_name}.avi").replace("\\", "/")
-
+        print("動画保存path:", output_filename)
         out = cv2.VideoWriter(output_filename, fourcc, camera_fps, (camera_w, camera_h))
 
         while self.is_capturing:
