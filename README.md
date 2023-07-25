@@ -41,8 +41,8 @@ python video_playre_camera_app.py
 6. 終了時刻が表示され、テキストファイルに開始時刻と終了時刻が保存されます。
 
 ## フォルダ構成
-main
-|-videos
-   |-sample_video.mp4
-|-video_playre_camera_app.py
+main  
+┣ videos  
+┃   ┣ sample_video.mp4  
+┣ video_playre_camera_app.py
 
