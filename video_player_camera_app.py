@@ -64,7 +64,7 @@ class VideoPlayerApp:
         directory, filename = os.path.split(self.video_path)
 
         # 新しいフォルダ名を追加して新しいパスを作成
-        new_directory = os.path.join(directory, name)
+        new_directory = os.path.join(directory, name).replace("\\", "/")
 
         # フォルダが存在しない場合は作成
         if not os.path.exists(new_directory):
@@ -159,7 +159,8 @@ class VideoPlayerApp:
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.human_video_path = self.modify_video_path(name)
         print("動画保存path:", self.human_video_path)
-        output_filename = os.path.join(os.path.dirname(self.human_video_path), f"{name}_{self.video_name}.avi")
+        output_filename = os.path.join(self.human_video_path, f"{name}_{self.video_name}.avi").replace("\\", "/")
+        print("動画保存path:", output_filename)
         out = cv2.VideoWriter(output_filename, fourcc, camera_fps, (camera_w, camera_h))
 
         while self.is_capturing:
