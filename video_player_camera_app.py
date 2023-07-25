@@ -4,6 +4,7 @@ import cv2
 import os
 import threading
 import time
+from moviepy.editor import VideoFileClip
 
 class VideoPlayerApp:
     def __init__(self, root):
@@ -34,6 +35,8 @@ class VideoPlayerApp:
         self.video_player = None
         self.camera_thread = None
         self.is_capturing = False
+        self.is_playing = False  # 動画再生中かどうかを示すフラグ
+        self.stop_camera = False  # カメラ撮影停止のフラグ
 
         # 開始時刻と終了時刻を表示するためのラベルを作成
         self.start_time_label = tk.Label(root, text="Video Start Time:")
@@ -96,18 +99,16 @@ class VideoPlayerApp:
         self.camera_start_time_label.config(text="Camera Start Time: " + start_time)
 
         # 動画ファイルを再生
+        self.play_button.config(state=tk.DISABLED)  # 再生ボタンを無効化
+        self.is_playing = True
+        self.countdown_timer = threading.Timer(5, self.start_play)  # 5秒後に再生を開始するタイマー
+        self.countdown_timer.start()
+
+    def start_play(self):
+        # タイマーが経過したら動画再生を開始
         self.play_video()
-
-        # カメラ撮影スレッドが終了するまで待機
-        self.is_capturing = False
-        self.camera_thread.join()
-
-        # 終了時刻を記録
-        end_time = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.end_time_label.config(text="End Time: " + end_time)
-
-        # 開始時刻と終了時刻をテキストファイルに保存
-        self.save_times_to_file(name, start_time, end_time)
+        self.is_playing = False
+        self.play_button.config(state=tk.NORMAL)  # 再生ボタンを有効化
 
     def save_times_to_file(self, name, start_time, end_time):
         # ビデオファイルと同じ場所にテキストファイルを保存
@@ -118,29 +119,16 @@ class VideoPlayerApp:
             file.write(f"Video Start Time: {start_time}\n")
             file.write(f"Camera Start Time: {start_time}\n")
             file.write(f"End Time: {end_time}")
-    
-
 
     def play_video(self):
-        # 動画ファイルをオープンして再生するためのVideoCaptureを作成
-        self.video_player = cv2.VideoCapture(self.video_path)
+        # 動画ファイルをオープンして再生するためのVideoFileClipを作成
+        video = VideoFileClip(self.video_path)
 
-        # カメラ撮影のフレームレートを取得
-        camera_fps = 30  # 例としてカメラ撮影のフレームレートを30fpsと仮定
+        # 動画を再生
+        video.preview()
 
-        while self.video_player.isOpened():
-            ret, frame = self.video_player.read()
-            if not ret:
-                break
-
-            # 動画フレームを表示
-            cv2.imshow("Video Player", frame)
-
-            if cv2.waitKey(int(1000/camera_fps)) & 0xFF == 27:  # 'Esc'キーを押すと動画再生を中止
-                break
-
-        self.video_player.release()
-        cv2.destroyAllWindows()
+        # 動画再生が終了したらカメラを停止
+        self.stop_camera = True
 
     def capture_frames(self, name):
         # カメラの縦横比
@@ -163,7 +151,7 @@ class VideoPlayerApp:
         print("動画保存path:", output_filename)
         out = cv2.VideoWriter(output_filename, fourcc, camera_fps, (camera_w, camera_h))
 
-        while self.is_capturing:
+        while self.is_capturing and not self.stop_camera:
             ret, frame = capture.read()
             if not ret:
                 break
