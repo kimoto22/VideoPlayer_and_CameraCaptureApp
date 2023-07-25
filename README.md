@@ -42,6 +42,7 @@ python video_playre_camera_app.py
 
 ## フォルダ構成
 main
-  |-videos
-  |  |-sample_video.mp4
-  |-video_playre_camera_app.py
+|-videos
+   |-sample_video.mp4
+|-video_playre_camera_app.py
+
