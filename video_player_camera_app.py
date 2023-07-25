@@ -12,6 +12,7 @@ class VideoPlayerApp:
 
         self.video_path = ""
         self.output_folder = ""
+        self.human_video_path = ""  # 追加：カメラで撮影した動画の保存パス
 
         # ウィジェットの作成
         self.video_label = tk.Label(root, text="Select a video to play (mp4 only):")
