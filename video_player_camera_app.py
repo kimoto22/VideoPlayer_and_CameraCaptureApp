@@ -99,16 +99,18 @@ class VideoPlayerApp:
         self.camera_start_time_label.config(text="Camera Start Time: " + start_time)
 
         # 動画ファイルを再生
-        self.play_button.config(state=tk.DISABLED)  # 再生ボタンを無効化
-        self.is_playing = True
-        self.countdown_timer = threading.Timer(5, self.start_play)  # 5秒後に再生を開始するタイマー
-        self.countdown_timer.start()
-
-    def start_play(self):
-        # タイマーが経過したら動画再生を開始
         self.play_video()
-        self.is_playing = False
-        self.play_button.config(state=tk.NORMAL)  # 再生ボタンを有効化
+
+        # カメラ撮影スレッドが終了するまで待機
+        self.is_capturing = False
+        self.camera_thread.join()
+
+        # 終了時刻を記録
+        end_time = time.strftime("%Y-%m-%d %H:%M:%S")
+        self.end_time_label.config(text="End Time: " + end_time)
+
+        # 開始時刻と終了時刻をテキストファイルに保存
+        self.save_times_to_file(name, start_time, end_time)
 
     def save_times_to_file(self, name, start_time, end_time):
         # ビデオファイルと同じ場所にテキストファイルを保存
@@ -123,18 +125,36 @@ class VideoPlayerApp:
     def play_video(self):
         # 動画ファイルをオープンして再生するためのVideoFileClipを作成
         video = VideoFileClip(self.video_path)
+        delay_seconds = 5  # カウントダウンの秒数
 
-        # 動画を再生
+        # カウントダウンを行う関数
+        def countdown():
+            for i in range(delay_seconds, 0, -1):
+                self.play_button.config(text=f"Play Video ({i})")
+                time.sleep(1)
+            self.play_button.config(text="Play Video")
+            self.is_playing = True  # 動画再生フラグをTrueに設定
+
+        # カウントダウンを開始
+        countdown_thread = threading.Thread(target=countdown)
+        countdown_thread.start()
+
+        while not self.is_playing:
+            # カウントダウン中はループして待機
+            self.root.update()
+
+        # 動画を指定した秒数だけ遅らせて再生
+        video = video.set_start(video.start + delay_seconds)
         video.preview()
 
-        # 動画再生が終了したらカメラを停止
-        self.stop_camera = True
+        cv2.destroyAllWindows()
+        self.stop_camera = True  # カメラ停止フラグをTrueに設定
 
     def capture_frames(self, name):
         # カメラの縦横比
         camera_w = 1280
         camera_h = 720
-        
+
         # カメラ解像度とフレームレートの設定
         capture = cv2.VideoCapture(0)
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_w)  # カメラの横解像度を設定
