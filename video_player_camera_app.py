@@ -4,7 +4,6 @@ import cv2
 import os
 import threading
 import time
-from moviepy.editor import VideoFileClip
 
 class VideoPlayerApp:
     def __init__(self, root):
@@ -123,8 +122,8 @@ class VideoPlayerApp:
             file.write(f"End Time: {end_time}")
 
     def play_video(self):
-        # 動画ファイルをオープンして再生するためのVideoFileClipを作成
-        video = VideoFileClip(self.video_path)
+        # 動画ファイルをオープンして再生
+        cap = cv2.VideoCapture(self.video_path)
         delay_seconds = 5  # カウントダウンの秒数
 
         # カウントダウンを行う関数
@@ -144,9 +143,26 @@ class VideoPlayerApp:
             self.root.update()
 
         # 動画を指定した秒数だけ遅らせて再生
-        video = video.set_start(video.start + delay_seconds)
-        video.preview()
+        for i in range(delay_seconds * int(cap.get(cv2.CAP_PROP_FPS))):
+            ret, _ = cap.read()
+            if not ret:
+                break
 
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            # カメラ撮影のフレームレートに合わせて遅延を挿入
+            time.sleep(1 / cap.get(cv2.CAP_PROP_FPS))
+
+            # フレームを表示
+            cv2.imshow("Video Player", frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cap.release()
         cv2.destroyAllWindows()
         self.stop_camera = True  # カメラ停止フラグをTrueに設定
 
