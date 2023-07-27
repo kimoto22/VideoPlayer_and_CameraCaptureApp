@@ -34,6 +34,8 @@ class VideoPlayerApp:
         self.video_player = None
         self.camera_thread = None
         self.is_capturing = False
+        self.is_playing = False  # 動画再生中かどうかを示すフラグ
+        self.stop_camera = False  # カメラ撮影停止のフラグ
 
         # 開始時刻と終了時刻を表示するためのラベルを作成
         self.start_time_label = tk.Label(root, text="Video Start Time:")
@@ -118,35 +120,57 @@ class VideoPlayerApp:
             file.write(f"Video Start Time: {start_time}\n")
             file.write(f"Camera Start Time: {start_time}\n")
             file.write(f"End Time: {end_time}")
-    
-
 
     def play_video(self):
-        # 動画ファイルをオープンして再生するためのVideoCaptureを作成
-        self.video_player = cv2.VideoCapture(self.video_path)
+        # 動画ファイルをオープンして再生
+        cap = cv2.VideoCapture(self.video_path)
+        delay_seconds = 5  # カウントダウンの秒数
 
-        # カメラ撮影のフレームレートを取得
-        camera_fps = 30  # 例としてカメラ撮影のフレームレートを30fpsと仮定
+        # カウントダウンを行う関数
+        def countdown():
+            for i in range(delay_seconds, 0, -1):
+                self.play_button.config(text=f"Play Video ({i})")
+                time.sleep(1)
+            self.play_button.config(text="Play Video")
+            self.is_playing = True  # 動画再生フラグをTrueに設定
 
-        while self.video_player.isOpened():
-            ret, frame = self.video_player.read()
+        # カウントダウンを開始
+        countdown_thread = threading.Thread(target=countdown)
+        countdown_thread.start()
+
+        while not self.is_playing:
+            # カウントダウン中はループして待機
+            self.root.update()
+
+        # 動画を指定した秒数だけ遅らせて再生
+        for i in range(delay_seconds * int(cap.get(cv2.CAP_PROP_FPS))):
+            ret, _ = cap.read()
             if not ret:
                 break
 
-            # 動画フレームを表示
-            cv2.imshow("Video Player", frame)
-
-            if cv2.waitKey(int(1000/camera_fps)) & 0xFF == 27:  # 'Esc'キーを押すと動画再生を中止
+        while True:
+            ret, frame = cap.read()
+            if not ret:
                 break
 
-        self.video_player.release()
+            # カメラ撮影のフレームレートに合わせて遅延を挿入
+            time.sleep(1 / cap.get(cv2.CAP_PROP_FPS))
+
+            # フレームを表示
+            cv2.imshow("Video Player", frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cap.release()
         cv2.destroyAllWindows()
+        self.stop_camera = True  # カメラ停止フラグをTrueに設定
 
     def capture_frames(self, name):
         # カメラの縦横比
         camera_w = 1280
         camera_h = 720
-        
+
         # カメラ解像度とフレームレートの設定
         capture = cv2.VideoCapture(0)
         capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_w)  # カメラの横解像度を設定
@@ -163,7 +187,7 @@ class VideoPlayerApp:
         print("動画保存path:", output_filename)
         out = cv2.VideoWriter(output_filename, fourcc, camera_fps, (camera_w, camera_h))
 
-        while self.is_capturing:
+        while self.is_capturing and not self.stop_camera:
             ret, frame = capture.read()
             if not ret:
                 break
