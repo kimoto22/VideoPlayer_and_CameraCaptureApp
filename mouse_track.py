@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
+import csv
 from datetime import datetime
 
 class MouseTrackerApp:
@@ -37,7 +38,7 @@ class MouseTrackerApp:
     def select_folder(self):
         folder_path = filedialog.askdirectory()
         if folder_path:
-            self.log_file = f"{folder_path}/mouse_log.txt"
+            self.log_file = f"{folder_path}/mouse_log.csv"
             self.start_btn.config(state=tk.NORMAL)
 
     def start_tracking(self):
@@ -66,6 +67,15 @@ class MouseTrackerApp:
             # Bind mouse events to the tracking window
             self.tracking_window.bind("<Motion>", self.on_mouse_motion)
 
+            # Create and write CSV header
+            with open(self.log_file, mode='w', newline='') as csvfile:
+                fieldnames = ['timestamp', 'x', 'y', 'scale']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+
+            # Start logging mouse position
+            self.log_mouse_position()
+
     def stop_tracking(self):
         self.tracking = False
         self.start_btn.config(state=tk.NORMAL)
@@ -88,17 +98,15 @@ class MouseTrackerApp:
             scale_value = 4 - min(max((event.y - self.starting_y) // self.block_height, 0), 4)
             self.update_blocks_canvas(scale_value)
 
-    def log_mouse_position(self):
-        if self.tracking:
-            x, y = self.root.winfo_pointerx(), self.root.winfo_pointery()
-            log_data = f"{datetime.now()} - Mouse position: x={x}, y={y}\n"
-            with open(self.log_file, "a") as file:
-                file.write(log_data)
-            
-            # Update the scale display
-            self.update_scale_display(y)
+            # Log mouse position to CSV
+            self.log_mouse_position_to_csv(event.x, event.y, scale_value)
 
-            self.root.after(100, self.log_mouse_position)
+    def log_mouse_position_to_csv(self, x, y, scale_value):
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        with open(self.log_file, mode='a', newline='') as csvfile:
+            fieldnames = ['timestamp', 'x', 'y', 'scale']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writerow({'timestamp': timestamp, 'x': x, 'y': y, 'scale': scale_value})
 
     def update_scale_display(self, y):
         # Map the cursor position to a 5-level scale (0 to 4)
@@ -106,14 +114,14 @@ class MouseTrackerApp:
 
         # Clear the scale canvas and draw the colored scale bar
         self.scale_canvas.delete("all")
-        colors = ["white", "red", "orange", "yellow", "green"]
+        colors = ["blue", "red", "orange", "yellow", "green"]
         self.scale_canvas.create_rectangle(0, 0, 300, 20, fill=colors[scale_value], outline="")
         self.scale_canvas.create_text(150, 10, text=f"Scale: {scale_value}", fill="black")
 
     def update_blocks_canvas(self, scale_value):
         # Clear the blocks canvas and draw the blocks based on the scale
         self.blocks_canvas.delete("all")
-        colors = ["green", "yellow", "orange", "red", "white"]
+        colors = ["green", "yellow", "orange", "red", "blue"]
         for i in range(5):
             self.blocks_canvas.create_rectangle(0, i * self.block_height + self.starting_y, 300, (i + 1) * self.block_height + self.starting_y, fill=colors[i], outline="")
 
