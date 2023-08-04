@@ -131,7 +131,7 @@ class VideoPlayerApp:
                 break
 
             if frame_count % int(video_fps) == 0 and icon_displayed < icon_display_count:
-                self.draw_icon(frame, icon_size, icon_display_duration * int(video_fps))
+                self.draw_icon(frame, icon_size, int(video_fps) * icon_display_duration)
                 icon_displayed += 1
 
             frame_count += 1
@@ -174,8 +174,20 @@ class VideoPlayerApp:
         icon = np.zeros((icon_size, icon_size, 3), dtype=np.uint8)
         cv2.rectangle(icon, (0, 0), (icon_size - 1, icon_size - 1), (255, 255, 255), -1)
 
-        x = np.random.randint(0, frame.shape[1] - icon_size + 1)
-        y = np.random.randint(0, frame.shape[0] - icon_size + 1)
+        # 画面の4つの角からランダムに1つを選ぶ
+        corner = np.random.randint(4)
+        if corner == 0:  # 左上
+            x = 0
+            y = 0
+        elif corner == 1:  # 右上
+            x = frame.shape[1] - icon_size
+            y = 0
+        elif corner == 2:  # 左下
+            x = 0
+            y = frame.shape[0] - icon_size
+        else:  # 右下
+            x = frame.shape[1] - icon_size
+            y = frame.shape[0] - icon_size
 
         roi = frame[y:y+icon_size, x:x+icon_size]
         alpha_icon = cv2.cvtColor(icon, cv2.COLOR_BGR2GRAY)
