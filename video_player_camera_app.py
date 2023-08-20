@@ -6,36 +6,47 @@ import threading
 import time
 import numpy as np
 
+# クラス: VideoPlayerApp
 class VideoPlayerApp:
     def __init__(self, root):
+        # ウィンドウの設定
         self.root = root
         self.root.title("Video Player App")
 
+        # 変数初期化
         self.video_path = ""
         self.output_folder = ""
         self.human_video_path = ""
 
+        # ウィジェットの配置
+        # 動画選択ラベル
         self.video_label = tk.Label(root, text="再生する動画を選択してください（mp4形式のみ）:")
         self.video_label.pack(pady=10)
 
+        # 動画選択ボタン
         self.select_button = tk.Button(root, text="動画を選択", command=self.select_video)
         self.select_button.pack(pady=5)
 
+        # 動画再生ボタン
         self.play_button = tk.Button(root, text="動画再生", command=self.play_and_capture)
         self.play_button.pack(pady=5)
 
+        # お名前入力ラベル
         self.name_entry_label = tk.Label(root, text="お名前を入力してください:")
         self.name_entry_label.pack(pady=5)
 
+        # お名前入力エントリ
         self.name_entry = tk.Entry(root)
         self.name_entry.pack(pady=5)
 
+        # 変数初期化
         self.video_player = None
         self.camera_thread = None
         self.is_capturing = False
         self.is_playing = False
         self.stop_camera = False
 
+        # 時刻表示ラベル
         self.start_time_label = tk.Label(root, text="動画開始時刻:")
         self.start_time_label.pack(pady=5)
 
@@ -45,6 +56,7 @@ class VideoPlayerApp:
         self.end_time_label = tk.Label(root, text="終了時刻:")
         self.end_time_label.pack(pady=5)
 
+    # 動画選択関数
     def select_video(self):
         self.video_path = filedialog.askopenfilename(title="動画ファイルを選択", filetypes=[("Video files", "*.mp4")])
 
@@ -54,6 +66,7 @@ class VideoPlayerApp:
         base_name = os.path.basename(str(self.video_path))
         self.video_name = os.path.splitext(base_name)[0]
 
+    # 動画保存用のディレクトリを作成する関数
     def modify_video_path(self, name):
         directory, filename = os.path.split(self.video_path)
         new_directory = os.path.join(directory, name).replace("\\", "/")
@@ -62,39 +75,50 @@ class VideoPlayerApp:
             os.makedirs(new_directory)
         return new_directory
 
+    # 動画再生とキャプチャを行う関数
     def play_and_capture(self):
+        # 動画ファイルが選択されているか確認
         if not self.video_path:
             messagebox.showerror("エラー", "再生する動画を選択してください。")
             return
 
+        # お名前が入力されているか確認
         name = self.name_entry.get()
         if not name:
             messagebox.showerror("エラー", "お名前を入力してください。")
             return
 
+        # カメラキャプチャを開始
         self.is_capturing = True
         self.camera_thread = threading.Thread(target=self.capture_frames, args=(name,))
         self.camera_thread.start()
 
+        # 時刻表示の更新
         start_time = time.strftime("%Y-%m-%d %H:%M:%S")
         self.start_time_label.config(text="動画開始時刻: " + start_time)
         self.camera_start_time_label.config(text="カメラ開始時刻: " + start_time)
 
+        # ボタンテキストを変更して再生を通知
         self.set_play_button_text("再生中")
 
+        # 動画再生を実行
         self.play_video()
 
+        # キャプチャ終了と時刻表示の更新
         self.is_capturing = False
         self.camera_thread.join()
 
         end_time = time.strftime("%Y-%m-%d %H:%M:%S")
         self.end_time_label.config(text="終了時刻: " + end_time)
 
+        # 時刻情報をファイルに保存
         self.save_times_to_file(name, start_time, end_time)
 
+    # 再生ボタンのテキストを設定する関数
     def set_play_button_text(self, text):
         self.play_button.config(text=text)
 
+    # 時刻情報をファイルに保存する関数
     def save_times_to_file(self, name, start_time, end_time):
         video_folder = os.path.dirname(self.video_path)
         output_filename = os.path.join(video_folder, f"{name}_video_times.txt")
@@ -104,7 +128,9 @@ class VideoPlayerApp:
             file.write(f"カメラ開始時刻: {start_time}\n")
             file.write(f"終了時刻: {end_time}")
 
+    # 動画再生を行う関数
     def play_video(self):
+        # 動画ファイルを開く
         cap = cv2.VideoCapture(self.video_path)
         delay_seconds = 5
         icon_size = 40
@@ -113,6 +139,7 @@ class VideoPlayerApp:
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         icon_display_count = total_frames // int(video_fps)
 
+        # カウントダウンを表示するスレッド
         def countdown():
             for i in range(delay_seconds, 0, -1):
                 self.set_play_button_text(f"動画再生中 ({i})")
@@ -123,11 +150,13 @@ class VideoPlayerApp:
         countdown_thread = threading.Thread(target=countdown)
         countdown_thread.start()
 
+        # カウントダウン後に一定フレーム数だけスキップ
         for i in range(delay_seconds * int(video_fps)):
             ret, _ = cap.read()
             if not ret:
                 break
 
+        # アイコン表示と明るさ計算を行いながら動画再生
         icon_displayed = 0
         frame_count = 0
         while True:
@@ -153,6 +182,7 @@ class VideoPlayerApp:
         cv2.destroyAllWindows()
         self.stop_camera = True
 
+    # 周囲の明るさを計算する関数
     def calculate_surrounding_brightness(self, frame, icon_size):
         x, y = self.get_icon_position(frame, icon_size)
         roi = frame[y:y+icon_size, x:x+icon_size]
@@ -160,6 +190,7 @@ class VideoPlayerApp:
         brightness = np.mean(gray_roi)
         return brightness
 
+    # アイコンの位置を取得する関数
     def get_icon_position(self, frame, icon_size):
         corner = np.random.randint(4)
         if corner == 0:
@@ -176,6 +207,7 @@ class VideoPlayerApp:
             y = frame.shape[0] - icon_size
         return x, y
 
+    # アイコンを描画する関数
     def draw_icon(self, frame, icon_size, display_frames):
         icon = np.zeros((icon_size, icon_size, 3), dtype=np.uint8)
         cv2.rectangle(icon, (0, 0), (icon_size - 1, icon_size - 1), (255, 255, 255), -1)
@@ -196,6 +228,7 @@ class VideoPlayerApp:
             if display_frames == 0:
                 frame[y:y+icon_size, x:x+icon_size] = roi
 
+    # カメラキャプチャを行う関数
     def capture_frames(self, name):
         camera_w = 1280
         camera_h = 720
@@ -221,6 +254,7 @@ class VideoPlayerApp:
         capture.release()
         out.release()
 
+# メインの実行部分
 if __name__ == "__main__":
     root = tk.Tk()
     app = VideoPlayerApp(root)
