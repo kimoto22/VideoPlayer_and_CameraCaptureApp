@@ -151,7 +151,7 @@ class VideoPlayerApp:
         countdown_thread.start()
 
         # カウントダウン後に一定フレーム数だけスキップ
-        for i in range(delay_seconds * int(video_fps)):
+        for _ in range(delay_seconds * int(video_fps)):
             ret, _ = cap.read()
             if not ret:
                 break
@@ -168,9 +168,6 @@ class VideoPlayerApp:
                 self.draw_icon(frame, icon_size, int(video_fps) * icon_display_duration)
                 icon_displayed += 1
 
-            brightness = self.calculate_surrounding_brightness(frame, icon_size)
-            print("周囲の明るさ:", brightness)
-
             frame_count += 1
             time.sleep(1 / video_fps)
             cv2.imshow("ビデオプレーヤー", frame)
@@ -183,8 +180,7 @@ class VideoPlayerApp:
         self.stop_camera = True
 
     # 周囲の明るさを計算する関数
-    def calculate_surrounding_brightness(self, frame, icon_size):
-        x, y = self.get_icon_position(frame, icon_size)
+    def calculate_surrounding_brightness(self, frame, icon_size, x, y):
         roi = frame[y:y+icon_size, x:x+icon_size]
         gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
         brightness = np.mean(gray_roi)
@@ -205,6 +201,9 @@ class VideoPlayerApp:
         else:
             x = frame.shape[1] - icon_size
             y = frame.shape[0] - icon_size
+        
+        print(f"アイコンの座標: x={x}, y={y}")
+        
         return x, y
 
     # アイコンを描画する関数
@@ -213,6 +212,10 @@ class VideoPlayerApp:
         cv2.rectangle(icon, (0, 0), (icon_size - 1, icon_size - 1), (255, 255, 255), -1)
 
         x, y = self.get_icon_position(frame, icon_size)
+        
+        # アイコンの位置の明るさを取得
+        brightness = self.calculate_surrounding_brightness(frame, icon_size, x, y)
+        print("周囲の明るさ:", brightness)
 
         roi = frame[y:y+icon_size, x:x+icon_size]
         alpha_icon = cv2.cvtColor(icon, cv2.COLOR_BGR2GRAY)
