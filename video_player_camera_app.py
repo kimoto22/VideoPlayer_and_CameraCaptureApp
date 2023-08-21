@@ -179,12 +179,11 @@ class VideoPlayerApp:
         cv2.destroyAllWindows()
         self.stop_camera = True
 
-    # 周囲の明るさを計算する関数
-    def calculate_surrounding_brightness(self, frame, icon_size, x, y):
+    # 周囲の色を計算する関数
+    def calculate_surrounding_color(self, frame, icon_size, x, y):
         roi = frame[y:y+icon_size, x:x+icon_size]
-        gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        brightness = np.mean(gray_roi)
-        return brightness
+        r, g, b = np.mean(roi, axis=(0, 1)).astype(int)
+        return int(r), int(g), int(b)
 
     # アイコンの位置を取得する関数
     def get_icon_position(self, frame, icon_size):
@@ -208,28 +207,14 @@ class VideoPlayerApp:
 
     # アイコンを描画する関数
     def draw_icon(self, frame, icon_size, display_frames):
-        icon = np.zeros((icon_size, icon_size, 3), dtype=np.uint8)
-        cv2.rectangle(icon, (0, 0), (icon_size - 1, icon_size - 1), (255, 255, 255), -1)
-
         x, y = self.get_icon_position(frame, icon_size)
+        sub_img = frame[y:y+icon_size, x:x+icon_size]
+        white_rect = np.ones(sub_img.shape, dtype=np.uint8) * 255
         
-        # アイコンの位置の明るさを取得
-        brightness = self.calculate_surrounding_brightness(frame, icon_size, x, y)
-        print("周囲の明るさ:", brightness)
+        res = cv2.addWeighted(sub_img, 0.5, white_rect, 0.5, 1.0)
+        # Putting the image back to its position
+        frame[y:y+icon_size, x:x+icon_size] = res
 
-        roi = frame[y:y+icon_size, x:x+icon_size]
-        alpha_icon = cv2.cvtColor(icon, cv2.COLOR_BGR2GRAY)
-        _, mask = cv2.threshold(alpha_icon, 50, 255, cv2.THRESH_BINARY)
-        mask_inv = cv2.bitwise_not(mask)
-        frame_bg = cv2.bitwise_and(roi, roi, mask=mask_inv)
-        icon_fg = cv2.bitwise_and(icon, icon, mask=mask)
-        dst = cv2.add(frame_bg, icon_fg)
-        frame[y:y+icon_size, x:x+icon_size] = dst
-
-        if display_frames > 0:
-            display_frames -= 1
-            if display_frames == 0:
-                frame[y:y+icon_size, x:x+icon_size] = roi
 
     # カメラキャプチャを行う関数
     def capture_frames(self, name):
