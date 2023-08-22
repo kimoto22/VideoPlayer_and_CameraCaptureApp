@@ -4,187 +4,232 @@ import cv2
 import os
 import threading
 import time
+import numpy as np
 
+# クラス: VideoPlayerApp
 class VideoPlayerApp:
     def __init__(self, root):
+        # ウィンドウの設定
         self.root = root
         self.root.title("Video Player App")
 
+        # 変数初期化
         self.video_path = ""
         self.output_folder = ""
-        self.human_video_path = ""  # 追加：カメラで撮影した動画の保存パス
+        self.human_video_path = ""
 
-        # ウィジェットの作成
-        self.video_label = tk.Label(root, text="Select a video to play (mp4 only):")
+        # ウィジェットの配置
+        # 動画選択ラベル
+        self.video_label = tk.Label(root, text="再生する動画を選択してください（mp4形式のみ）:")
         self.video_label.pack(pady=10)
 
-        self.select_button = tk.Button(root, text="Select Video", command=self.select_video)
+        # 動画選択ボタン
+        self.select_button = tk.Button(root, text="動画を選択", command=self.select_video)
         self.select_button.pack(pady=5)
 
-        self.play_button = tk.Button(root, text="Play Video", command=self.play_and_capture)
+        # 動画再生ボタン
+        self.play_button = tk.Button(root, text="動画再生", command=self.play_and_capture)
         self.play_button.pack(pady=5)
 
-        # 名前を入力するEntryウィジェットの作成
-        self.name_entry_label = tk.Label(root, text="Enter your name:")
+        # お名前入力ラベル
+        self.name_entry_label = tk.Label(root, text="お名前を入力してください:")
         self.name_entry_label.pack(pady=5)
 
+        # お名前入力エントリ
         self.name_entry = tk.Entry(root)
         self.name_entry.pack(pady=5)
 
+        # 変数初期化
         self.video_player = None
         self.camera_thread = None
         self.is_capturing = False
-        self.is_playing = False  # 動画再生中かどうかを示すフラグ
-        self.stop_camera = False  # カメラ撮影停止のフラグ
+        self.is_playing = False
+        self.stop_camera = False
 
-        # 開始時刻と終了時刻を表示するためのラベルを作成
-        self.start_time_label = tk.Label(root, text="Video Start Time:")
+        # 時刻表示ラベル
+        self.start_time_label = tk.Label(root, text="動画開始時刻:")
         self.start_time_label.pack(pady=5)
 
-        self.camera_start_time_label = tk.Label(root, text="Camera Start Time:")
+        self.camera_start_time_label = tk.Label(root, text="カメラ開始時刻:")
         self.camera_start_time_label.pack(pady=5)
 
-        self.end_time_label = tk.Label(root, text="End Time:")
+        self.end_time_label = tk.Label(root, text="終了時刻:")
         self.end_time_label.pack(pady=5)
 
+    # 動画選択関数
     def select_video(self):
-        # ファイル選択ダイアログを表示して動画ファイルを選択する
-        self.video_path = filedialog.askopenfilename(title="Select a video file", filetypes=[("Video files", "*.mp4")])
-        
-        print("取得したビデオパス：", self.video_path)
+        self.video_path = filedialog.askopenfilename(title="動画ファイルを選択", filetypes=[("Video files", "*.mp4")])
+
         if self.video_path:
-            self.video_label.config(text=f"Selected Video: {os.path.basename(self.video_path)}")
-        
-        # パスの最後の要素を取得
+            self.video_label.config(text=f"選択した動画: {os.path.basename(self.video_path)}")
+
         base_name = os.path.basename(str(self.video_path))
-
-        # 動画名を取得(拡張子を除いた部分を取得)
         self.video_name = os.path.splitext(base_name)[0]
-        
-    def modify_video_path(self, name):
-        # パスのディレクトリ部分とファイル名を分割
-        directory, filename = os.path.split(self.video_path)
 
-        # 新しいフォルダ名を追加して新しいパスを作成
+    # 動画保存用のディレクトリを作成する関数
+    def modify_video_path(self, name):
+        directory, filename = os.path.split(self.video_path)
         new_directory = os.path.join(directory, name).replace("\\", "/")
 
-        # フォルダが存在しない場合は作成
         if not os.path.exists(new_directory):
             os.makedirs(new_directory)
-        print("カメラ映像のpath：", new_directory)
         return new_directory
 
+    # 動画再生とキャプチャを行う関数
     def play_and_capture(self):
-        # 動画再生とカメラ撮影を行うためのメソッド
+        # 動画ファイルが選択されているか確認
         if not self.video_path:
-            # 動画が選択されていない場合はエラーメッセージを表示して処理を終了する
-            messagebox.showerror("Error", "Please select a video to play.")
+            messagebox.showerror("エラー", "再生する動画を選択してください。")
             return
 
-        # 名前を入力するEntryウィジェットから名前を取得
+        # お名前が入力されているか確認
         name = self.name_entry.get()
         if not name:
-            messagebox.showerror("Error", "Please enter your name.")
+            messagebox.showerror("エラー", "お名前を入力してください。")
             return
 
-        # 動画再生とカメラ撮影を同時に開始するためのスレッドを作成
+        # カメラキャプチャを開始
         self.is_capturing = True
         self.camera_thread = threading.Thread(target=self.capture_frames, args=(name,))
         self.camera_thread.start()
 
-        # 開始時刻を記録
+        # 時刻表示の更新
         start_time = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.start_time_label.config(text="Video Start Time: " + start_time)
-        self.camera_start_time_label.config(text="Camera Start Time: " + start_time)
+        self.start_time_label.config(text="動画開始時刻: " + start_time)
+        self.camera_start_time_label.config(text="カメラ開始時刻: " + start_time)
 
-        # 動画ファイルを再生
+        # ボタンテキストを変更して再生を通知
+        self.set_play_button_text("再生中")
+
+        # 動画再生を実行
         self.play_video()
 
-        # カメラ撮影スレッドが終了するまで待機
+        # キャプチャ終了と時刻表示の更新
         self.is_capturing = False
         self.camera_thread.join()
 
-        # 終了時刻を記録
         end_time = time.strftime("%Y-%m-%d %H:%M:%S")
-        self.end_time_label.config(text="End Time: " + end_time)
+        self.end_time_label.config(text="終了時刻: " + end_time)
 
-        # 開始時刻と終了時刻をテキストファイルに保存
+        # 時刻情報をファイルに保存
         self.save_times_to_file(name, start_time, end_time)
 
+    # 再生ボタンのテキストを設定する関数
+    def set_play_button_text(self, text):
+        self.play_button.config(text=text)
+
+    # 時刻情報をファイルに保存する関数
     def save_times_to_file(self, name, start_time, end_time):
-        # ビデオファイルと同じ場所にテキストファイルを保存
         video_folder = os.path.dirname(self.video_path)
         output_filename = os.path.join(video_folder, f"{name}_video_times.txt")
 
         with open(output_filename, "w") as file:
-            file.write(f"Video Start Time: {start_time}\n")
-            file.write(f"Camera Start Time: {start_time}\n")
-            file.write(f"End Time: {end_time}")
+            file.write(f"動画開始時刻: {start_time}\n")
+            file.write(f"カメラ開始時刻: {start_time}\n")
+            file.write(f"終了時刻: {end_time}")
 
+    # 動画再生を行う関数
     def play_video(self):
-        # 動画ファイルをオープンして再生
+        # 動画ファイルを開く
         cap = cv2.VideoCapture(self.video_path)
-        delay_seconds = 5  # カウントダウンの秒数
+        delay_seconds = 5
+        icon_size = 40
+        icon_display_duration = 1
+        video_fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        icon_display_count = total_frames // int(video_fps)
 
-        # カウントダウンを行う関数
+        # カウントダウンを表示するスレッド
         def countdown():
             for i in range(delay_seconds, 0, -1):
-                self.play_button.config(text=f"Play Video ({i})")
+                self.set_play_button_text(f"動画再生中 ({i})")
                 time.sleep(1)
-            self.play_button.config(text="Play Video")
-            self.is_playing = True  # 動画再生フラグをTrueに設定
+            self.set_play_button_text("動画再生中")
+            self.is_playing = True
 
-        # カウントダウンを開始
         countdown_thread = threading.Thread(target=countdown)
         countdown_thread.start()
 
-        while not self.is_playing:
-            # カウントダウン中はループして待機
-            self.root.update()
-
-        # 動画を指定した秒数だけ遅らせて再生
-        for i in range(delay_seconds * int(cap.get(cv2.CAP_PROP_FPS))):
+        # カウントダウン後に一定フレーム数だけスキップ
+        for _ in range(delay_seconds * int(video_fps)):
             ret, _ = cap.read()
             if not ret:
                 break
 
+        # アイコン表示と明るさ計算を行いながら動画再生
+        icon_displayed = 0
+        frame_count = 0
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
-            # カメラ撮影のフレームレートに合わせて遅延を挿入
-            time.sleep(1 / cap.get(cv2.CAP_PROP_FPS))
+            if frame_count % int(video_fps) == 0 and icon_displayed < icon_display_count:
+                self.draw_icon(frame, icon_size, int(video_fps) * icon_display_duration)
+                icon_displayed += 1
 
-            # フレームを表示
-            cv2.imshow("Video Player", frame)
+            frame_count += 1
+            time.sleep(1 / video_fps)
+            cv2.imshow("ビデオプレーヤー", frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         cap.release()
         cv2.destroyAllWindows()
-        self.stop_camera = True  # カメラ停止フラグをTrueに設定
+        self.stop_camera = True
 
+    # 周囲の色を計算する関数
+    def calculate_surrounding_color(self, frame, icon_size, x, y):
+        roi = frame[y:y+icon_size, x:x+icon_size]
+        r, g, b = np.mean(roi, axis=(0, 1)).astype(int)
+        return int(r), int(g), int(b)
+
+    # アイコンの位置を取得する関数
+    def get_icon_position(self, frame, icon_size):
+        corner = np.random.randint(4)
+        if corner == 0:
+            x = 0
+            y = 0
+        elif corner == 1:
+            x = frame.shape[1] - icon_size
+            y = 0
+        elif corner == 2:
+            x = 0
+            y = frame.shape[0] - icon_size
+        else:
+            x = frame.shape[1] - icon_size
+            y = frame.shape[0] - icon_size
+        
+        print(f"アイコンの座標: x={x}, y={y}")
+        
+        return x, y
+
+    # アイコンを描画する関数
+    def draw_icon(self, frame, icon_size, display_frames):
+        x, y = self.get_icon_position(frame, icon_size)
+        sub_img = frame[y:y+icon_size, x:x+icon_size]
+        white_rect = np.ones(sub_img.shape, dtype=np.uint8) * 255
+        
+        res = cv2.addWeighted(sub_img, 0.5, white_rect, 0.5, 1.0)
+        # Putting the image back to its position
+        frame[y:y+icon_size, x:x+icon_size] = res
+
+
+    # カメラキャプチャを行う関数
     def capture_frames(self, name):
-        # カメラの縦横比
         camera_w = 1280
         camera_h = 720
 
-        # カメラ解像度とフレームレートの設定
         capture = cv2.VideoCapture(0)
-        capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_w)  # カメラの横解像度を設定
-        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_h)  # カメラの縦解像度を設定
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_w)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_h)
 
-        # カメラ撮影のフレームレートを取得
         camera_fps = capture.get(cv2.CAP_PROP_FPS)
 
-        # 動画ファイルの保存準備
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         self.human_video_path = self.modify_video_path(name)
-        print("動画保存path:", self.human_video_path)
         output_filename = os.path.join(self.human_video_path, f"{name}_{self.video_name}.avi").replace("\\", "/")
-        print("動画保存path:", output_filename)
         out = cv2.VideoWriter(output_filename, fourcc, camera_fps, (camera_w, camera_h))
 
         while self.is_capturing and not self.stop_camera:
@@ -192,12 +237,12 @@ class VideoPlayerApp:
             if not ret:
                 break
 
-            # 動画フレームを保存
             out.write(frame)
 
         capture.release()
         out.release()
 
+# メインの実行部分
 if __name__ == "__main__":
     root = tk.Tk()
     app = VideoPlayerApp(root)
