@@ -171,6 +171,13 @@ class VideoPlayerApp:
             frame_count += 1
             time.sleep(1 / video_fps)
             cv2.imshow("ビデオプレーヤー", frame)
+            
+            # スペースキーを押したタイミングを図る
+            key = cv2.waitKey(1)
+            if key & 0xFF == ord('q'):
+                break
+            elif key == 32:  # スペースキーのASCIIコード
+                print("スペースキーが押されました")
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
