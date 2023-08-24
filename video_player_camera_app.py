@@ -7,6 +7,7 @@ import time
 import datetime
 import pandas as pd
 import numpy as np
+import random
 
 # クラス: VideoPlayerApp
 class VideoPlayerApp:
@@ -180,15 +181,23 @@ class VideoPlayerApp:
         # アイコン表示と明るさ計算を行いながら動画再生
         icon_displayed = 0
         frame_count = 0
+        next_icon_time = time.time()  # 初期値を設定
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
             if frame_count % int(video_fps) == 0 and icon_displayed < icon_display_count:
-                self.draw_icon(frame, icon_size, int(video_fps) * icon_display_duration)
-                self.record_show_icon_time()
-                icon_displayed += 1
+                current_time = time.time()
+                if current_time >= next_icon_time:
+                    self.draw_icon(frame, icon_size, int(video_fps) * icon_display_duration)
+                    self.record_show_icon_time()
+                    icon_displayed += 1
+
+                    # 次のアイコン表示予定時刻を計算（5秒に1回表示されるように設定）
+                    next_icon_time = current_time + 5.0
+                    # ランダムな秒数を追加（最大0.5秒）
+                    next_icon_time += random.uniform(0, 0.5)
 
             frame_count += 1
             time.sleep(1 / video_fps)
@@ -280,7 +289,7 @@ if __name__ == "__main__":
     app = VideoPlayerApp(root)
     root.mainloop()
 
-    # アプリケーションが終了したら、スペースキーの押下タイミングをCSVファイルに保存
+    # アプリケーションが終了したら、各logをCSVファイルに保存
     if app.space_key_press_times:
         data = {"SpaceKeyPressTime": app.space_key_press_times,
                 "ShowIconTime": app.show_icon_times}
