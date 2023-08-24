@@ -4,6 +4,8 @@ import cv2
 import os
 import threading
 import time
+import datetime
+import pandas as pd
 import numpy as np
 
 # クラス: VideoPlayerApp
@@ -55,6 +57,9 @@ class VideoPlayerApp:
 
         self.end_time_label = tk.Label(root, text="終了時刻:")
         self.end_time_label.pack(pady=5)
+        
+        # スペースキーが押されたタイミングを保存するためのリスト
+        self.space_key_press_times = []
 
     # 動画選択関数
     def select_video(self):
@@ -117,6 +122,12 @@ class VideoPlayerApp:
     # 再生ボタンのテキストを設定する関数
     def set_play_button_text(self, text):
         self.play_button.config(text=text)
+    
+    # スペースキーが押されたタイミングを測定する関数
+    def record_space_key_press_time(self):
+        current_time = datetime.datetime.now()
+        self.space_key_press_times.append(current_time)
+
 
     # 時刻情報をファイルに保存する関数
     def save_times_to_file(self, name, start_time, end_time):
@@ -178,6 +189,9 @@ class VideoPlayerApp:
                 break
             elif key == 32:  # スペースキーのASCIIコード
                 print("スペースキーが押されました")
+                self.record_space_key_press_time()
+
+
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -254,3 +268,11 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = VideoPlayerApp(root)
     root.mainloop()
+
+    # アプリケーションが終了したら、スペースキーの押下タイミングをCSVファイルに保存
+    if app.space_key_press_times:
+        data = {"SpaceKeyPressTime": app.space_key_press_times}
+        df = pd.DataFrame(data)
+        df["SpaceKeyPressTime"] = df["SpaceKeyPressTime"].dt.strftime("%Y-%m-%d %H:%M:%S.%f")  # 形式を変更
+        csv_filename = os.path.join(app.human_video_path, f"{app.video_name}_space_key_press_times.csv")
+        df.to_csv(csv_filename, index=False)
