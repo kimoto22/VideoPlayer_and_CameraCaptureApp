@@ -60,6 +60,9 @@ class VideoPlayerApp:
         
         # スペースキーが押されたタイミングを保存するためのリスト
         self.space_key_press_times = []
+        
+        # アイコンが表示されたタイミングを保存するためのリスト
+        self.show_icon_times = []
 
     # 動画選択関数
     def select_video(self):
@@ -126,7 +129,14 @@ class VideoPlayerApp:
     # スペースキーが押されたタイミングを測定する関数
     def record_space_key_press_time(self):
         current_time = datetime.datetime.now()
+        self.show_icon_times.append(None) # ShowIconTime リストにも同じ回数分の空のタイムスタンプを追加
         self.space_key_press_times.append(current_time)
+    
+    # アイコンが表示されたタイミングを測定する関数
+    def record_show_icon_time(self):
+        current_time = datetime.datetime.now()
+        self.space_key_press_times.append(None)  # SpaceKeyPressTime リストにも同じ回数分の空を追加
+        self.show_icon_times.append(current_time)
 
 
     # 時刻情報をファイルに保存する関数
@@ -177,6 +187,7 @@ class VideoPlayerApp:
 
             if frame_count % int(video_fps) == 0 and icon_displayed < icon_display_count:
                 self.draw_icon(frame, icon_size, int(video_fps) * icon_display_duration)
+                self.record_show_icon_time()
                 icon_displayed += 1
 
             frame_count += 1
@@ -271,8 +282,10 @@ if __name__ == "__main__":
 
     # アプリケーションが終了したら、スペースキーの押下タイミングをCSVファイルに保存
     if app.space_key_press_times:
-        data = {"SpaceKeyPressTime": app.space_key_press_times}
+        data = {"SpaceKeyPressTime": app.space_key_press_times,
+                "ShowIconTime": app.show_icon_times}
         df = pd.DataFrame(data)
         df["SpaceKeyPressTime"] = df["SpaceKeyPressTime"].dt.strftime("%Y-%m-%d %H:%M:%S.%f")  # 形式を変更
-        csv_filename = os.path.join(app.human_video_path, f"{app.video_name}_space_key_press_times.csv")
+        df["ShowIconTime"] = df["ShowIconTime"].dt.strftime("%Y-%m-%d %H:%M:%S.%f")  # 形式を変更
+        csv_filename = os.path.join(app.human_video_path, f"{app.video_name}_TimeStamp.csv")
         df.to_csv(csv_filename, index=False)
